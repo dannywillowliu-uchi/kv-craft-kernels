@@ -40,7 +40,7 @@ def load(target: str) -> list[dict]:
 
 def main() -> None:
 	ap = argparse.ArgumentParser()
-	ap.add_argument("--target", default="solaris")
+	ap.add_argument("--target", default="kvcraft")
 	args = ap.parse_args()
 	rows = load(args.target)
 	if not rows:
