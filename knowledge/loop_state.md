@@ -72,3 +72,4 @@ CURRENT TASK (overnight): bring Solaris up on B300 (root@95.133.253.31), then pr
   from model author (prompt sent). Keep arch-AGNOSTIC kernels running (FFN-FP8, VAE conv3d,
   adaln-Triton) but treat shapes as provisional; recompute once real config lands.
   Real conditioning: AdaLN adaln_embed_dim=32 (4 players x 8 actions), patch-embed in_channels=64.
+- 19:59 MILESTONE: Solaris generated 2-player video end-to-end on B300 (output/solaris/eval_structure/video_0_side_by_side.mp4). JAX works on Blackwell. First-run ~6min incl conv-autotune compile (not fair fps). Compile cache warm -> doing clean timed re-run for steady-state fps.
