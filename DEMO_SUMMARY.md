@@ -121,3 +121,19 @@ top out ~2×. So:
 
 **For the demo:** the agent loop + the gains chart + the "score the right objective" story +
 the cuDNN-9.23 Blackwell-conv fix are the strongest beats.
+
+---
+
+## 8. Frames-out solution: decode-small + upscale (validated ~30 fps)
+
+The decisive VAE lever (validated by William): **decode at lower resolution, then upscale.**
+- VAE conv cost ∝ resolution²; the full-res (360×640) upsample stages are ~all the FLOPs.
+- Decode at half/quarter res → ~4–16× cheaper VAE → **~30 fps frames-out** (William).
+- Upscale to full res with bilinear (free) or a light learned upsampler (quality).
+- **Safe shrink:** softens per-frame detail only; the world-model state is the latent (untouched),
+  so nothing compounds in the autoregressive rollout.
+- **Composes** with everything: distilled small decoder *outputting low-res* + light upscaler is the
+  cheapest; cuDNN-9.23 still applies underneath.
+
+**Full frames-out picture:** bottleneck = VAE → **decode-small+upscale gets ~30 fps** (the win);
+distillation (~2–5×) and cuDNN-9.23 (2.11×, done) stack on top. DiT/server side is already real-time.
