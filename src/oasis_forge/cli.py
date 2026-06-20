@@ -19,6 +19,7 @@ from rich.table import Table
 
 from .config import PortConfig
 from .ledger import Ledger
+from .roofline import OASIS_DMD, budget
 
 console = Console()
 ROOT = Path(__file__).resolve().parents[2]
@@ -82,6 +83,39 @@ def ledger(problem: str | None) -> None:
 		best = led.best(prob)
 		if best:
 			console.print(f"[green]best {prob}: {best.speedup:.2f}x — {best.approach}[/green]")
+
+
+@main.command()
+@click.option("--gpus", default=1, help="H100s per player cluster")
+@click.option("--chunk", default=3, help="latent frames generated per chunk")
+@click.option("--window", default=21, help="cached latent frames (KV window)")
+@click.option("--target-fps", default=30.0)
+def roofline(gpus: int, chunk: int, window: int, target_fps: float) -> None:
+	"""First-order frame-budget for the OASIS-DMD ship shapes. Shows which kernel binds and
+	how the levers (GPUs, window, camera-band, FP8-FFN) close the gap to realtime."""
+	console.print(f"[bold]{OASIS_DMD.name}[/bold]  chunk={chunk} latent-frames  "
+		f"window={window}  target={target_fps:.0f} fps\n")
+	scenarios = [
+		("baseline (dense, bf16)", dict(camera_band=1.0, fp8_ffn=False)),
+		("+ camera-band attn (1/3)", dict(camera_band=1 / 3, fp8_ffn=False)),
+		("+ FP8 FFN/QKV", dict(camera_band=1 / 3, fp8_ffn=True)),
+		("+ window 21->8", dict(camera_band=1 / 3, fp8_ffn=True, _window=8)),
+	]
+	t = Table(title=f"frame budget @ {gpus}x H100")
+	for c in ("scenario", "per-fwd", "per-chunk", "per-frame", "fps", "vs target", "binds"):
+		t.add_column(c)
+	for label, kw in scenarios:
+		w = kw.pop("_window", window)
+		r = budget(chunk_frames=chunk, window_frames=w, n_gpus=gpus, target_fps=target_fps, **kw)
+		binds = max(r.kernels, key=lambda k: k.roofline_s).name
+		verdict = f"{r.gap:.0f}x slow" if r.gap > 1 else f"{1 / r.gap:.1f}x headroom"
+		color = "red" if r.gap > 1 else "green"
+		t.add_row(label, f"{r.per_forward_s*1000:.0f}ms", f"{r.per_chunk_s*1000:.0f}ms",
+			f"{r.per_rgb_frame_s*1000:.1f}ms", f"{r.fps:.1f}",
+			f"[{color}]{verdict}[/{color}]", binds)
+	console.print(t)
+	console.print("\n[dim]estimates from first-order FLOP/byte counts; VAE decode is a placeholder "
+		"until measured. Weights bf16; attention kept bf16 (FP8-attn drift).[/dim]")
 
 
 @main.command()
