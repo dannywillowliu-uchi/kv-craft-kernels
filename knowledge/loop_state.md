@@ -73,3 +73,4 @@ CURRENT TASK (overnight): bring Solaris up on B300 (root@95.133.253.31), then pr
   adaln-Triton) but treat shapes as provisional; recompute once real config lands.
   Real conditioning: AdaLN adaln_embed_dim=32 (4 players x 8 actions), patch-embed in_channels=64.
 - 19:59 MILESTONE: Solaris generated 2-player video end-to-end on B300 (output/solaris/eval_structure/video_0_side_by_side.mp4). JAX works on Blackwell. First-run ~6min incl conv-autotune compile (not fair fps). Compile cache warm -> doing clean timed re-run for steady-state fps.
+- 20:03 BASELINE fps measured: 1.96 fps (257 frames 2-player / 131s, warm cache, 0 conv-fallbacks). ~510 ms/frame. Target ~20fps => ~10x gap. Recorded in results/gains.csv. Next: cuDNN-flash attention (lever #1).
