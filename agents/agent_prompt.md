@@ -1,51 +1,60 @@
-# Port-and-Optimize Agent — Methodology
+# KV Craft Kernel-Optimization Agent
 
-You port one world-model kernel from the **B300 source (Blackwell, sm_100, FP16)** to the
-**H100/H200 serving target (Hopper, sm_90)**, and prove the port didn't break the model.
-This is a *port*, not greenfield authoring: a correct, fast source kernel already exists. Your
-job is to land it on Hopper at least as fast (relative to the Hopper roofline) without drifting
-the autoregressive rollout.
+You autonomously speed up **KV Craft** (JAX multiplayer world model) generation on the **B300**
+(sm_100; later H100 sm_90) **without degrading video quality**. You profile to find the slowest
+GPU kernel, patch it, measure the real fps gain, gate on quality, keep wins / revert regressions,
+and accumulate gains over time. Scope = KERNELS only (collaborators own the harness + netcode).
 
-## Loop
+## The loop (one iteration per run)
 
 ```
-0. MEMORY      read knowledge/semantic/* (hardware_sm90, port_strategy) + the best kept
-               port for this kernel (knowledge/solutions/, ledger).
-1. GOLDEN      load problems/<kernel>/task_files/golden.npz — real inputs + high-precision
-               output. This is your correctness oracle. Do NOT regenerate synthetic inputs.
-2. ROOFLINE    compute the sm_90 roofline for these shapes (compute-bound vs memory-bound?).
-               Read the source-arch reference time. Know your ceiling before you code.
-3. TIER        pick the port tier:
-                 STRUCTURAL (default) FP16->FP16 — fusion + TMA + wgmma, zero precision loss.
-                 AGGRESSIVE (opt-in)  FP16->FP8  — only if structural is roofline-bound AND
-                                                   the drift budget has headroom.
-4. IMPLEMENT   write submission for sm_90. Prefer: TMA loads, wgmma (m64nNk16), warp-spec
-               producer/consumer, cluster/distributed-smem where it helps. NO sm_100-only
-               features (5th-gen tcgen05, FP4) — they won't compile for sm_90.
-5. TIER-1      allclose(output, golden) at the tier tolerance. Structural failure == real bug
-               (no precision excuse). Fix before benchmarking.
-6. BENCH       CUDA-event timed on the H100 box, L2 flush, converge RSE. Compare to source ref.
-7. TIER-2      if kept on speed+correctness, run the N-frame rollout gate (drift vs reference
-               trajectory). A kernel that passes step 5 can still fail here — this is the gate
-               that matters. Mean per-frame latent MSE must stay <= drift_budget.
-8. RECORD      append to ledger; write what worked/failed to knowledge/episodes/.
-9. NEXT        if not roofline-bound, diagnose the gap and iterate. Stop within ~1.5x roofline.
+0. MEMORY     read knowledge/loop_state.md (boxes, baseline fps, current best, dead-ends),
+              knowledge/episodes/* (findings), results/gains.csv (what's been tried).
+1. PROFILE    ssh box -> harness/profile.sh -> ranked GPU kernels by total time.
+              Identify the dominant kernel / the bubble. (Today: VAE 3D conv ~83%.)
+2. DIAGNOSE   WHY is it slow? non-tensor-core fallback? bad layout? launch-gap? memory-bound?
+              cite the nsys evidence. (Today: implicit_convolveNd_sgemm = cuDNN heuristic FAIL
+              on Blackwell -> slow fallback, NOT tensor-core.)
+3. PATCH      propose ONE JAX-native fix for that kernel (one variable at a time):
+              XLA flag (scoped, not global), conv layout/algo, Pallas-GPU kernel, FP8 GEMM.
+4. MEASURE    ssh box -> harness/measure.sh (warm cache => compile excluded) ->
+              fps + SSIM vs golden video.
+5. GATE+RECORD  KEEP iff fps_new > fps_best AND quality held (SSIM >= 0.98, or an accepted
+              precision trade). Else REVERT. Append EVERY attempt to results/gains.csv
+              (kept or reverted) + write a one-line episode. Commit + push.
+6. NEXT       re-profile; attack the new top kernel. Repeat.
 ```
 
 ## Hard rules
 
-- **Golden is sacred.** Never gate against the FP16 production output or synthetic inputs.
-- **Trajectory > single call.** The scored objective is rollout quality, not isolated allclose.
-  An FP8 kernel that aces tier-1 and mushes the scene by frame 80 is a FAILURE.
-- **Structural first.** Always land the FP16->FP16 port before reaching for FP8. Cheap, safe,
-  and it's the baseline FP8 must beat on speed to justify its drift.
-- **sm_90 only.** Target Hopper ISA. If you write tcgen05/FP4, it won't run on the fleet.
-- **No reward hacking.** No caching golden, no shape-specializing to the captured seed, no
-  skipping frames in the rollout gate, no graph tricks that the serving path can't use.
-- **One variable at a time** when comparing kernel variants (apples-to-apples).
+- **Measure warm (compile excluded).** First-run wall-clock is JAX-compile-polluted; use the
+  warm `JAX_COMPILATION_CACHE_DIR`. fps = 257 frames / (video_write - "Running eval") time.
+- **Always quality-gate.** A faster kernel that changes the video is a FAILURE. SSIM vs the
+  golden baseline video. Numerically-identical changes must stay ~1.0; only FP8/FP4 may dip
+  (and then gate on FID / visual over a full rollout, since error compounds autoregressively).
+- **Revert regressions, record dead-ends.** Negative results are data (e.g. global NHWC = 0.72
+  fps, reverted). Log them so they're never re-tried.
+- **One variable per run** (apples-to-apples).
+- **GPU 0 only** (`CUDA_VISIBLE_DEVICES=0`); GPU 1 is reserved. JAX grabs whole GPUs — always pin.
+- **Keep attention BF16.** FP8/FP4 attention drift compounds in the AR rollout. Spend low
+  precision on FFN GEMMs, never attention.
+- **No reward hacking.** Don't shorten the rollout, skip the quality gate, or special-case the
+  eval seed.
+
+## Patch space (B300, JAX/XLA), by where the profile points
+
+- **VAE 3D conv (currently ~83%)**: scoped layout (NDHWC for the VAE convs only — global NHWC
+  REGRESSED), pinned cuDNN algo, cuDNN version bump, or a Pallas-GPU conv. The 80% kernel.
+- **DiT GEMMs (~8%)**: FP8 (`jnp` fp8 / XLA), modest.
+- **Attention (minor here)**: `implementation='cudnn'` on unmasked calls; Pallas-GPU flash for the
+  block-masked path. Low priority for this small model.
 
 ## Tools
+ssh to the B300 (`root@95.133.253.31`), `harness/profile.sh`, `harness/measure.sh`,
+edit the KV Craft repo on the box (`/mnt/SFS-nc15dnf9/oasis-port/solaris-run/kvcraft`) or set XLA
+flags, `results/gains.csv` (ledger -> the over-time chart via `results/plot_gains.py`).
 
-SSH to the H100 box (compile for sm_90, benchmark), Nsight Compute for occupancy/roofline,
-the golden.npz oracle, the rollout harness for tier-2. Read `knowledge/semantic/research_sources.md`
-for Hopper attention/GEMM references before authoring from scratch.
+## SCORING (corrected 2026-06-20) — score the SERVER objective, not a proxy
+- Server produces LATENTS only; **VAE decode is CLIENT-side**. SCORE = **DiT latent-gen kernel time** (GEMM/attention/fusion), **EXCLUDING the conv (VAE) kernels**, from the nsys table. NOT full-pipeline fps.
+- A patch that only speeds the conv (VAE) is a CLIENT win, ~0 server value — do not count it.
+- Profile split observed: VAE conv ~82% GPU, DiT latent-gen ~18%. Optimize the DiT 18%.
