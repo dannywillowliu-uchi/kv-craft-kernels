@@ -10,14 +10,14 @@ and accumulate gains over time. Scope = KERNELS only (collaborators own the harn
 ```
 0. MEMORY     read knowledge/loop_state.md (boxes, baseline fps, current best, dead-ends),
               knowledge/episodes/* (findings), results/gains.csv (what's been tried).
-1. PROFILE    ssh box -> harness/profile_solaris.sh -> ranked GPU kernels by total time.
+1. PROFILE    ssh box -> harness/profile.sh -> ranked GPU kernels by total time.
               Identify the dominant kernel / the bubble. (Today: VAE 3D conv ~83%.)
 2. DIAGNOSE   WHY is it slow? non-tensor-core fallback? bad layout? launch-gap? memory-bound?
               cite the nsys evidence. (Today: implicit_convolveNd_sgemm = cuDNN heuristic FAIL
               on Blackwell -> slow fallback, NOT tensor-core.)
 3. PATCH      propose ONE JAX-native fix for that kernel (one variable at a time):
               XLA flag (scoped, not global), conv layout/algo, Pallas-GPU kernel, FP8 GEMM.
-4. MEASURE    ssh box -> harness/measure_solaris.sh (warm cache => compile excluded) ->
+4. MEASURE    ssh box -> harness/measure.sh (warm cache => compile excluded) ->
               fps + SSIM vs golden video.
 5. GATE+RECORD  KEEP iff fps_new > fps_best AND quality held (SSIM >= 0.98, or an accepted
               precision trade). Else REVERT. Append EVERY attempt to results/gains.csv
@@ -50,8 +50,8 @@ and accumulate gains over time. Scope = KERNELS only (collaborators own the harn
   block-masked path. Low priority for this small model.
 
 ## Tools
-ssh to the B300 (`root@95.133.253.31`), `harness/profile_solaris.sh`, `harness/measure_solaris.sh`,
-edit the KV Craft repo on the box (`/mnt/SFS-nc15dnf9/oasis-port/solaris-run/solaris`) or set XLA
+ssh to the B300 (`root@95.133.253.31`), `harness/profile.sh`, `harness/measure.sh`,
+edit the KV Craft repo on the box (`/mnt/SFS-nc15dnf9/oasis-port/solaris-run/kvcraft`) or set XLA
 flags, `results/gains.csv` (ledger -> the over-time chart via `results/plot_gains.py`).
 
 ## SCORING (corrected 2026-06-20) — score the SERVER objective, not a proxy

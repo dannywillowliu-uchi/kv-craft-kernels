@@ -7,7 +7,7 @@ eager path. One CTA per token row; vectorized 128-bit loads; FP32 reduction, bf1
 
 SCOPE: this targets the PyTorch/CUDA serving path (the recommended non-JAX direction). It
 plugs into PyTorch via the CUTLASS Python JIT (cute.compile -> callable). To use from the
-JAX-Solaris path instead, wrap it as a jax.ffi custom_call.
+JAX-KV Craft path instead, wrap it as a jax.ffi custom_call.
 
 STATUS: algorithm + structure are correct; must be compiled + numerically validated on the
 Blackwell box against the torch reference below (CuTe DSL API pin may need a tweak to the

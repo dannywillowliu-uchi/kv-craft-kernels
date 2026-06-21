@@ -31,7 +31,7 @@ Key finding: both easy wins are ALREADY bubble-free / near-roofline at the real 
 Launch-bubbles only exist at small shapes (attn frame 80% busy) which matter least. So further
 gains are NOT bubble-popping — they're better kernels (FA3/FP8) or new kernels.
 
-## MAJOR PIVOT (03:30) — real target is SOLARIS (open JAX model)
+## MAJOR PIVOT (03:30) — real target is KV Craft (open JAX model)
 
 Target model is now **KV Craft** ((base WM repo, internal), HF (internal model repo)) — a
 multiplayer Minecraft world model, DiT on MatrixGame 2.0, **JAX implementation** (not PyTorch),
@@ -47,11 +47,11 @@ CONSEQUENCES:
   fallback is the headroom.
 
 CURRENT TASK (overnight): bring KV Craft up on B300 (root@95.133.253.31), then profile.
-- Setup running in tmux 'solaris' on B300; env on NFS /mnt/SFS-nc15dnf9/oasis-port/solaris-run.
+- Setup running in tmux 'kvcraft' on B300; env on NFS /mnt/SFS-nc15dnf9/oasis-port/solaris-run.
 - After setup (DONE_SETUP in setup.log): run `CUDA_VISIBLE_DEVICES=0 venv/bin/python src/inference.py
   experiment_name=solaris device.eval_num_samples=1`; confirm it generates a video; then nsys/ncu
   profile to find the real GPU hot kernels AND check whether XLA uses cuDNN flash or naive fallback.
-- Next sessions/wakeups: CONTINUE SOLARIS (bring-up -> profile -> JAX kernel opt), not the old FFN task.
+- Next sessions/wakeups: CONTINUE KV Craft (bring-up -> profile -> JAX kernel opt), not the old FFN task.
 
 ## Backlog (profiler-reprioritized, highest headroom first) — SUPERSEDED by KV Craft pivot above
 

@@ -41,10 +41,10 @@ loop:
 ```
 
 Pieces (all in the repo):
-- `harness/profile_solaris.sh` — nsys profiler → ranked kernels (handles XLA CUDA-graphs).
-- `harness/measure_solaris.sh` — warm fps + SSIM quality gate.
-- `agents/solaris_agent_prompt.md` — the agent's methodology + hard rules + scoring.
-- `scripts/solaris_loop.sh` — the autonomous loop driver (launches agents, walltime/stop, pushes wins).
+- `harness/profile.sh` — nsys profiler → ranked kernels (handles XLA CUDA-graphs).
+- `harness/measure.sh` — warm fps + SSIM quality gate.
+- `agents/agent_prompt.md` — the agent's methodology + hard rules + scoring.
+- `scripts/loop.sh` — the autonomous loop driver (launches agents, walltime/stop, pushes wins).
 - `results/gains.csv` + `results/plot_gains.py` — the **gains-over-time chart** (the demo visual).
 
 **Demo idea:** show the agent loop running, the live profile, and the chart filling in as wins land.

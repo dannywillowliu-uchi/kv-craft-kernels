@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Measure Solaris steady-state generation fps (warm cache) + quality gate vs a golden video.
+# Measure KV Craft steady-state generation fps (warm cache) + quality gate vs a golden video.
 # The "did the patch actually help, without breaking quality" step. Runs ON the box.
 #
-#   GPU=0 [XLA="<flags>"] [CACHE=<dir>] [GOLDEN=<mp4>] ./measure_solaris.sh
+#   GPU=0 [XLA="<flags>"] [CACHE=<dir>] [GOLDEN=<mp4>] ./measure.sh
 #
 # Prints: fps, gen_seconds, and (if GOLDEN set + ffmpeg present) SSIM vs golden.
 # fps = 257 frames / (video_write_time - "Running eval" time)  -> compile excluded if CACHE warm.
 set -euo pipefail
 
-B=${SOLARIS_RUN:-/mnt/SFS-nc15dnf9/oasis-port/solaris-run}
+B=${KVCRAFT_RUN:-/mnt/SFS-nc15dnf9/oasis-port/solaris-run}
 export HF_HOME=$B/hf JAX_COMPILATION_CACHE_DIR=${CACHE:-$B/jaxcache} CUDA_VISIBLE_DEVICES=${GPU:-0}
 [ -n "${XLA:-}" ] && export XLA_FLAGS="$XLA"
 LOG=$B/measure.log

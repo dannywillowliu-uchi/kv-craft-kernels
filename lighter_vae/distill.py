@@ -4,8 +4,8 @@ Teacher = get_vae_model() + vae.pt (dim 96, z_dim 16, dim_mult [1,2,4,4], 2 res-
 Student = WanVAE_ with a SLIM config (dim 48, dim_mult [1,2,2,2], 1 res-block, SAME z_dim 16).
 Only z_dim/VAE_SCALE matter for the interface, so the student is a drop-in faster decoder.
 
-Run inside the Solaris repo env on a GPU box:
-  SOLARIS_RUN=/path GPU=0 venv/bin/python distill.py --steps 2000 --out student_dec.ckpt
+Run inside the KV Craft repo env on a GPU box:
+  KVCRAFT_RUN=/path GPU=0 venv/bin/python distill.py --steps 2000 --out student_dec.ckpt
 
 First pass uses RANDOM latents (proves the pipeline + a first decoder). For shipping quality,
 swap `sample_latents` to encode real eval frames (teacher.encode) so the student matches the
@@ -27,7 +27,7 @@ from flax import nnx
 from src.models.model_loaders import get_vae_model
 from src.models.wan_vae import WanVAE_, VAE_SCALE
 
-B = os.environ.get("SOLARIS_RUN", "/mnt/SFS-nc15dnf9/oasis-port/solaris-run")
+B = os.environ.get("KVCRAFT_RUN", "/mnt/SFS-nc15dnf9/oasis-port/solaris-run")
 VAE_CKPT = f"{B}/solaris/pretrained/vae.pt"
 
 # latent geometry (b t h w c). H,W = encoder-downsampled spatial; C = z_dim.

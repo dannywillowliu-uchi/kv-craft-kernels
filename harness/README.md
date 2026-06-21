@@ -8,22 +8,22 @@ The gains-over-time chart is the demo artifact; it grows from `results/gains.csv
 
 | file | role |
 |------|------|
-| `profile_solaris.sh` | (on box) nsys `--cuda-graph-trace=node` over warm generation → ranked GPU kernels. Finds the slowness. |
-| `measure_solaris.sh` | (on box) warm-cache generation → **fps** + **SSIM quality gate** vs golden video. Did the patch help without breaking quality? |
-| `../agents/solaris_agent_prompt.md` | the optimization agent's methodology + hard rules + patch space. |
-| `../scripts/solaris_loop.sh` | the autonomous loop: profile → launch agent with fresh profile + ledger → agent patches/measures/records → re-launch. Walltime + stop-file. |
+| `profile.sh` | (on box) nsys `--cuda-graph-trace=node` over warm generation → ranked GPU kernels. Finds the slowness. |
+| `measure.sh` | (on box) warm-cache generation → **fps** + **SSIM quality gate** vs golden video. Did the patch help without breaking quality? |
+| `../agents/agent_prompt.md` | the optimization agent's methodology + hard rules + patch space. |
+| `../scripts/loop.sh` | the autonomous loop: profile → launch agent with fresh profile + ledger → agent patches/measures/records → re-launch. Walltime + stop-file. |
 | `../results/gains.csv` + `plot_gains.py` | ledger of KEPT wins → the improvement chart. |
 
 ## Run it
 
 ```bash
 # one-shot tools (on the box, GPU 0)
-GPU=0 bash profile_solaris.sh                       # rank kernels
-GPU=0 GOLDEN=<baseline.mp4> bash measure_solaris.sh  # fps + quality
+GPU=0 bash profile.sh                       # rank kernels
+GPU=0 GOLDEN=<baseline.mp4> bash measure.sh  # fps + quality
 
 # autonomous loop (local; launches claude -p agents, pushes each win)
-./scripts/solaris_loop.sh 12        # 12h; touch .solaris_stop to halt
-python results/plot_gains.py --target solaris   # the chart
+./scripts/loop.sh 12        # 12h; touch .kvcraft_stop to halt
+python results/plot_gains.py --target kvcraft   # the chart
 ```
 
 ## Discipline (enforced by the agent prompt)

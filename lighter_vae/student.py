@@ -1,9 +1,9 @@
-"""Light VAE decoder = Solaris Decoder3d with a slim config (same latent space => drop-in).
+"""Light VAE decoder = KV Craft Decoder3d with a slim config (same latent space => drop-in).
 
 The heavy teacher is Decoder3d(dim=128, dim_mult=[1,2,4,4], num_res_blocks=2). The student keeps
 the SAME z_dim / VAE_SCALE (identical latent interface) but cuts the FLOPs:
   dim 128->64, dim_mult [1,2,4,4]->[1,2,2,2] (kill the 512-ch high-res stages), num_res_blocks 2->1.
-Run inside the Solaris repo env (imports src.models.wan_vae).
+Run inside the KV Craft repo env (imports src.models.wan_vae).
 """
 
 from __future__ import annotations

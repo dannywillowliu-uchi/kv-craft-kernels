@@ -1,6 +1,6 @@
 """Plot the improvement chart from results/gains.csv.
 
-  python results/plot_gains.py                 # default target=solaris
+  python results/plot_gains.py                 # default target=kvcraft
   python results/plot_gains.py --target methodology-demo
 
 Produces results/gains_<target>.png:
@@ -64,7 +64,7 @@ def main() -> None:
 	ax.set_xticks([j + 0.4 - w / 2 for j in range(len(stages))])
 	ax.set_xticklabels(stages, rotation=20, ha="right")
 	ax.set_ylabel("speedup vs default (x)")
-	ax.set_title(f"Solaris kernel optimization gains — {args.target}")
+	ax.set_title(f"KV Craft kernel optimization gains — {args.target}")
 	ax.legend(fontsize=8)
 	fig.tight_layout()
 	out = ROOT / f"gains_{args.target}.png"
